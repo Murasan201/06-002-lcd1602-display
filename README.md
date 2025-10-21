@@ -15,9 +15,9 @@ A Python application for controlling LCD1602 displays via I²C communication on 
 ## Hardware Requirements
 
 - Raspberry Pi 5 (or compatible models)
-- LCD1602 display module with I²C backpack
+- LCD1602 display module with I²C backpack (PCF8574/PCF8574T)
 - Jumper wires (Male-Male)
-- 10kΩ potentiometer (for contrast adjustment)
+- 10kΩ potentiometer (for contrast adjustment, if not integrated on the module)
 - Breadboard
 - 5V power supply (official Raspberry Pi adapter recommended)
 
@@ -57,18 +57,59 @@ A Python application for controlling LCD1602 displays via I²C communication on 
 
 | LCD1602 I²C Module | Raspberry Pi 5 |
 |-------------------|----------------|
-| VCC               | 5V (Pin 2)     |
+| VCC               | 5V (Pin 2) or 3.3V (Pin 1)* |
 | GND               | GND (Pin 6)    |
 | SDA               | SDA (Pin 3)    |
 | SCL               | SCL (Pin 5)    |
 
+**Important Voltage Level Notes:**
+
+⚠️ **Critical: I²C Voltage Compatibility**
+
+- Raspberry Pi I²C bus operates at **3.3V logic level**
+- Many PCF8574 modules have pull-up resistors connected to VCC
+- **Safe Options:**
+  1. **Recommended for beginners**: Power PCF8574 module with **3.3V** (Pin 1). Most PCF8574/PCF8574T chips support 2.5V-6V operation.
+  2. **Advanced option**: Use 5V power with a **logic level converter** to protect Raspberry Pi GPIO pins from 5V signals on I²C lines.
+
+- **Never** connect 5V-pulled I²C lines directly to Raspberry Pi GPIO without level conversion
+- LCD backlight may be dimmer at 3.3V but is safer for direct connection
+- Some modules have separate power pins for logic and backlight - check your module datasheet
+
 ### Contrast Adjustment
 
-Connect a 10kΩ potentiometer to the V0 pin of the LCD module for contrast adjustment.
+Most I²C modules have an integrated potentiometer on the backpack board. Rotate the potentiometer with a small screwdriver until characters are clearly visible. If your module doesn't have one, connect a 10kΩ potentiometer to the V0 pin.
 
 ## Usage
 
-### Basic Usage
+### Quick Start (Beginner Examples)
+
+We provide three beginner-friendly examples with increasing levels of detail:
+
+#### 1. Ultra-Simple Fixed Display (`lcd_simple.py`)
+The absolute minimum code to display fixed text:
+```bash
+# Edit lcd_simple.py to change LINE1_TEXT and LINE2_TEXT
+python3 lcd_simple.py
+```
+**Best for**: First-time users who want to see results immediately
+
+#### 2. Minimal Example (`lcd_hello.py`)
+Clean, minimal code without excessive comments:
+```bash
+# Edit lcd_hello.py to set your I²C address (found with i2cdetect -y 1)
+python3 lcd_hello.py
+```
+**Best for**: Users who understand the basics and want a quick reference
+
+#### 3. Detailed Commented Version (`lcd_beginner.py`)
+Extensively commented code explaining every step:
+```bash
+python3 lcd_beginner.py
+```
+**Best for**: Learning the details of I²C LCD control and RPLCD library usage
+
+### Basic Usage (Full Application)
 
 ```bash
 # Display text on line 1
@@ -96,6 +137,9 @@ python3 lcd_display.py "Hello" --address 0x3F
 # Specify I²C port (if different from default 1)
 python3 lcd_display.py "Hello" --port 0
 
+# Change character map if characters appear garbled
+python3 lcd_display.py "Hello" --charmap A00
+
 # Display help
 python3 lcd_display.py --help
 ```
@@ -109,6 +153,7 @@ python3 lcd_display.py --help
 | `--scroll` | Enable scrolling for long text | False |
 | `--address` | I²C address (hex format) | 0x27 |
 | `--port` | I²C port number | 1 |
+| `--charmap` | Character map (A02 or A00) | A02 |
 | `--clear` | Clear display and exit | False |
 | `--test` | Run test display sequence | False |
 
@@ -130,6 +175,7 @@ python3 lcd_display.py --help
    - Check I²C wiring connections
    - Verify I²C is enabled: `sudo raspi-config`
    - Check I²C address: `sudo i2cdetect -y 1`
+   - Ensure proper voltage level (3.3V recommended for direct connection)
 
 2. **"Permission denied"**
    - Run with proper permissions: `sudo python3 lcd_display.py`
@@ -140,7 +186,8 @@ python3 lcd_display.py --help
    - Check Python version: `python3 --version`
 
 4. **Display shows garbled characters**
-   - Adjust contrast using the potentiometer
+   - **First try**: Change character map with `--charmap A00`
+   - Adjust contrast using the potentiometer on the I²C backpack
    - Check power supply stability
    - Verify wiring connections
 
@@ -148,6 +195,12 @@ python3 lcd_display.py --help
    - Check LCD power connections (VCC, GND)
    - Verify I²C communication with `i2cdetect`
    - Try different I²C address (0x27 or 0x3F)
+   - Verify voltage level is appropriate for your module
+
+6. **Backlight is off**
+   - Some modules have inverted backlight logic
+   - The software enables backlight by default
+   - Check if your module has a backlight jumper
 
 ### Testing I²C Connection
 
@@ -167,23 +220,59 @@ sudo i2cdetect -y 1
 
 ```
 06-002-lcd1602-display/
-├── lcd_display.py                    # Main application
+├── lcd_display.py                    # Main application (full-featured with scrolling)
+├── lcd_simple.py                     # Ultra-simple fixed display (beginner level 1)
+├── lcd_hello.py                      # Minimal example (beginner level 2)
+├── lcd_beginner.py                   # Detailed commented version (beginner level 3)
 ├── requirements.txt                  # Python dependencies
-├── README.md                        # This file
+├── README.md                        # This file (English)
 ├── LICENSE                          # License file
 ├── CLAUDE.md                        # Project rules and guidelines
 └── 06-002_LCD文字表示アプリ_要件定義書.md  # Requirements specification (Japanese)
 ```
+
+### File Comparison
+
+| File | Complexity | Features | Best For |
+|------|------------|----------|----------|
+| `lcd_simple.py` | ⭐ Very Simple | Fixed 2-line display only | Absolute beginners |
+| `lcd_hello.py` | ⭐⭐ Simple | Fixed display, clean code | Quick reference |
+| `lcd_beginner.py` | ⭐⭐ Simple | Fixed display, detailed comments | Learning |
+| `lcd_display.py` | ⭐⭐⭐⭐ Advanced | Full features: scrolling, line selection, test mode | Production use |
+
+## Learning Path
+
+### Recommended Order for Beginners
+
+1. **Start with `lcd_simple.py`**
+   - Understand the minimal code structure
+   - Learn basic I²C configuration
+   - See immediate results
+
+2. **Move to `lcd_beginner.py`**
+   - Read detailed explanations
+   - Understand each parameter
+   - Learn cursor positioning
+
+3. **Try `lcd_hello.py`**
+   - Practice with clean, production-style code
+   - Reference for future projects
+
+4. **Explore `lcd_display.py`**
+   - Advanced features (scrolling, command-line arguments)
+   - Error handling
+   - Real-world application structure
 
 ## Educational Goals
 
 This project is designed to teach:
 
 - I²C communication protocol fundamentals
-- LCD1602 module control techniques
+- LCD1602 module control techniques with PCF8574T expander
 - Python hardware interface programming
 - Error handling in embedded applications
 - Command-line argument processing
+- Voltage level shifting for safe GPIO operation
 
 ## Contributing
 

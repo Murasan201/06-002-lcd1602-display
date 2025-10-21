@@ -16,21 +16,33 @@ class LCDDisplay:
     初心者向けに機能を整理し、簡潔な実装にしています
     """
     
-    def __init__(self, i2c_address=0x27, i2c_port=1):
+    def __init__(self, i2c_address=0x27, i2c_port=1, charmap='A02'):
         """
         LCDディスプレイの初期化
-        
+
         Args:
             i2c_address (int): I²Cアドレス（通常0x27または0x3F）
             i2c_port (int): I²Cポート番号（Raspberry Pi 5では通常1）
+            charmap (str): 文字マップ（'A02'または'A00'、文字化け時は切り替え）
         """
         try:
-            # RPLCDライブラリを使用してI²C接続のLCDを初期化
-            self.lcd = CharLCD('PCF8574', i2c_address, port=i2c_port)
-            print(f"LCD初期化完了: I²Cアドレス 0x{i2c_address:02X}")
+            # RPLCDライブラリを使用してPCF8574T搭載のI²C接続LCDを初期化
+            # PCF8574TはPCF8574の低電圧版で、指定は'PCF8574'でOK
+            self.lcd = CharLCD(
+                i2c_expander='PCF8574',  # PCF8574Tもこの指定で動作
+                address=i2c_address,
+                port=i2c_port,
+                cols=16, rows=2,
+                charmap=charmap,         # 文字化け時はA00に変更
+                auto_linebreaks=True
+            )
+            # バックライトを明示的に有効化（一部基板で必要）
+            self.lcd.backlight_enabled = True
+            print(f"LCD初期化完了: I²Cアドレス 0x{i2c_address:02X}, charmap={charmap}")
         except Exception as e:
             print(f"LCD初期化エラー: {e}")
             print("接続とI²Cアドレスを確認してください")
+            print("ヒント: i2cdetect -y 1 でアドレスを確認")
             sys.exit(1)
     
     def clear_display(self):
@@ -152,6 +164,8 @@ def main():
                        help='I²Cアドレス (デフォルト: 0x27)')
     parser.add_argument('--port', type=int, default=1,
                        help='I²Cポート番号 (デフォルト: 1)')
+    parser.add_argument('--charmap', type=str, choices=['A00', 'A02'], default='A02',
+                       help='文字マップ (デフォルト: A02、文字化け時はA00)')
     parser.add_argument('--clear', action='store_true',
                        help='画面をクリアして終了')
     parser.add_argument('--test', action='store_true',
@@ -170,7 +184,7 @@ def main():
         sys.exit(1)
     
     # LCDディスプレイの初期化
-    lcd_display = LCDDisplay(i2c_address=i2c_addr, i2c_port=args.port)
+    lcd_display = LCDDisplay(i2c_address=i2c_addr, i2c_port=args.port, charmap=args.charmap)
     
     try:
         # 実行モードに応じた処理
