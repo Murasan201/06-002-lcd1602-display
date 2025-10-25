@@ -35,18 +35,46 @@ A Python application for controlling LCD1602 displays via I²C communication on 
    cd 06-002-lcd1602-display
    ```
 
-2. **Install dependencies:**
+2. **Create and activate a virtual environment (Recommended):**
+
+   ⚠️ **Important**: Raspberry Pi OS (Bookworm and later) requires using a virtual environment for Python package installation to protect the system Python environment.
+
    ```bash
-   pip3 install -r requirements.txt
+   # Create virtual environment
+   python3 -m venv venv
+
+   # Activate virtual environment
+   source venv/bin/activate
    ```
 
-3. **Enable I²C on Raspberry Pi:**
+   **Note**: You need to activate the virtual environment every time you open a new terminal session:
+   ```bash
+   source venv/bin/activate
+   ```
+
+   To deactivate when done:
+   ```bash
+   deactivate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   # Make sure virtual environment is activated first
+   pip install -r requirements.txt
+   ```
+
+   **Alternative (Not Recommended)**: If you choose not to use a virtual environment, you can install system-wide with:
+   ```bash
+   pip3 install -r requirements.txt --break-system-packages
+   ```
+
+4. **Enable I²C on Raspberry Pi:**
    ```bash
    sudo raspi-config
    # Navigate to Interface Options → I2C → Enable
    ```
 
-4. **Verify I²C connection:**
+5. **Verify I²C connection:**
    ```bash
    sudo i2cdetect -y 1
    ```
@@ -82,66 +110,65 @@ Most I²C modules have an integrated potentiometer on the backpack board. Rotate
 
 ## Usage
 
-### Quick Start (Beginner Examples)
+### Quick Start (Beginner Example)
 
-We provide three beginner-friendly examples with increasing levels of detail:
-
-#### 1. Ultra-Simple Fixed Display (`lcd_simple.py`)
-The absolute minimum code to display fixed text:
+⚠️ **Important**: Always activate the virtual environment before running Python scripts:
 ```bash
-# Edit lcd_simple.py to change LINE1_TEXT and LINE2_TEXT
-python3 lcd_simple.py
+source venv/bin/activate
 ```
-**Best for**: First-time users who want to see results immediately
 
-#### 2. Minimal Example (`lcd_hello.py`)
-Clean, minimal code without excessive comments:
+#### Ultra-Simple Fixed Display (`lcd_simple.py`)
+The absolute minimum code to display fixed text - perfect for first-time users:
 ```bash
-# Edit lcd_hello.py to set your I²C address (found with i2cdetect -y 1)
-python3 lcd_hello.py
-```
-**Best for**: Users who understand the basics and want a quick reference
+# Activate virtual environment first
+source venv/bin/activate
 
-#### 3. Detailed Commented Version (`lcd_beginner.py`)
-Extensively commented code explaining every step:
-```bash
-python3 lcd_beginner.py
+# Edit lcd_simple.py to change LINE1_TEXT and LINE2_TEXT if desired
+python lcd_simple.py
 ```
-**Best for**: Learning the details of I²C LCD control and RPLCD library usage
+**Best for**: First-time users who want to see results immediately with minimal configuration
 
 ### Basic Usage (Full Application)
 
+**Note**: Make sure to activate the virtual environment first!
+
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Run test mode (recommended for first run)
+python lcd_display.py --test
+
 # Display text on line 1
-python3 lcd_display.py "Hello World"
+python lcd_display.py "Hello World"
 
 # Display text on line 2
-python3 lcd_display.py "Hello Pi" --line 2
+python lcd_display.py "Hello Pi" --line 2
 
 # Enable scrolling for long text
-python3 lcd_display.py "This is a very long message that will scroll" --scroll
+python lcd_display.py "This is a very long message that will scroll" --scroll
 
 # Clear the display
-python3 lcd_display.py --clear
-
-# Run test mode
-python3 lcd_display.py --test
+python lcd_display.py --clear
 ```
 
 ### Advanced Options
 
 ```bash
+# Activate virtual environment first
+source venv/bin/activate
+
 # Specify I²C address (if different from default 0x27)
-python3 lcd_display.py "Hello" --address 0x3F
+python lcd_display.py "Hello" --address 0x3F
 
 # Specify I²C port (if different from default 1)
-python3 lcd_display.py "Hello" --port 0
+python lcd_display.py "Hello" --port 0
 
 # Change character map if characters appear garbled
-python3 lcd_display.py "Hello" --charmap A00
+python lcd_display.py "Hello" --charmap A00
 
 # Display help
-python3 lcd_display.py --help
+python lcd_display.py --help
 ```
 
 ## Command Line Arguments
@@ -169,6 +196,8 @@ python3 lcd_display.py --help
 
 ## Troubleshooting
 
+📋 **For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+
 ### Common Issues
 
 1. **"LCD initialization error"**
@@ -182,8 +211,10 @@ python3 lcd_display.py --help
    - Add user to i2c group: `sudo usermod -a -G i2c $USER`
 
 3. **"Module not found" error**
-   - Install requirements: `pip3 install -r requirements.txt`
+   - Make sure virtual environment is activated: `source venv/bin/activate`
+   - Install requirements: `pip install -r requirements.txt`
    - Check Python version: `python3 --version`
+   - See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed solutions
 
 4. **Display shows garbled characters**
    - **First try**: Change character map with `--charmap A00`
@@ -201,6 +232,12 @@ python3 lcd_display.py --help
    - Some modules have inverted backlight logic
    - The software enables backlight by default
    - Check if your module has a backlight jumper
+
+7. **Program exits immediately / Display disappears**
+   - Make sure you're providing arguments to `lcd_display.py`
+   - Try test mode first: `python lcd_display.py --test`
+   - The display should persist after program exits
+   - See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed solution
 
 ### Testing I²C Connection
 
@@ -221,13 +258,14 @@ sudo i2cdetect -y 1
 ```
 06-002-lcd1602-display/
 ├── lcd_display.py                    # Main application (full-featured with scrolling)
-├── lcd_simple.py                     # Ultra-simple fixed display (beginner level 1)
-├── lcd_hello.py                      # Minimal example (beginner level 2)
-├── lcd_beginner.py                   # Detailed commented version (beginner level 3)
+├── lcd_simple.py                     # Ultra-simple fixed display (beginner-friendly)
 ├── requirements.txt                  # Python dependencies
 ├── README.md                        # This file (English)
+├── TROUBLESHOOTING.md               # Troubleshooting guide
 ├── LICENSE                          # License file
 ├── CLAUDE.md                        # Project rules and guidelines
+├── .gitignore                       # Git ignore file (excludes venv/)
+├── venv/                            # Virtual environment (not tracked in git)
 └── 06-002_LCD文字表示アプリ_要件定義書.md  # Requirements specification (Japanese)
 ```
 
@@ -235,10 +273,8 @@ sudo i2cdetect -y 1
 
 | File | Complexity | Features | Best For |
 |------|------------|----------|----------|
-| `lcd_simple.py` | ⭐ Very Simple | Fixed 2-line display only | Absolute beginners |
-| `lcd_hello.py` | ⭐⭐ Simple | Fixed display, clean code | Quick reference |
-| `lcd_beginner.py` | ⭐⭐ Simple | Fixed display, detailed comments | Learning |
-| `lcd_display.py` | ⭐⭐⭐⭐ Advanced | Full features: scrolling, line selection, test mode | Production use |
+| `lcd_simple.py` | ⭐ Very Simple | Fixed 2-line display only | Absolute beginners, quick testing |
+| `lcd_display.py` | ⭐⭐⭐⭐ Advanced | Full features: scrolling, line selection, test mode, CLI args | Production use, advanced features |
 
 ## Learning Path
 
@@ -247,21 +283,20 @@ sudo i2cdetect -y 1
 1. **Start with `lcd_simple.py`**
    - Understand the minimal code structure
    - Learn basic I²C configuration
-   - See immediate results
+   - See immediate results with fixed text display
+   - Perfect for first-time hardware interface programming
 
-2. **Move to `lcd_beginner.py`**
-   - Read detailed explanations
-   - Understand each parameter
-   - Learn cursor positioning
-
-3. **Try `lcd_hello.py`**
-   - Practice with clean, production-style code
-   - Reference for future projects
-
-4. **Explore `lcd_display.py`**
+2. **Explore `lcd_display.py`**
    - Advanced features (scrolling, command-line arguments)
-   - Error handling
+   - Comprehensive error handling
+   - Test mode for debugging
    - Real-world application structure
+   - Production-ready code patterns
+
+3. **Read the source code**
+   - Both files include detailed Japanese comments
+   - Understand cursor positioning, text display, and I²C communication
+   - Learn best practices for hardware control applications
 
 ## Educational Goals
 
@@ -295,7 +330,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-**Document ID**: 06-002  
-**Target Audience**: Programming beginners, Raspberry Pi enthusiasts, Electronics learners  
-**Difficulty Level**: Beginner to Intermediate  
-**Last Updated**: July 2025
+**Document ID**: 06-002
+**Target Audience**: Programming beginners, Raspberry Pi enthusiasts, Electronics learners
+**Difficulty Level**: Beginner to Intermediate
+**Last Updated**: October 25, 2025

@@ -58,39 +58,39 @@ class LCDDisplay:
     def display_text(self, text, line=1):
         """
         指定した行に文字列を表示する
-        
+
         Args:
             text (str): 表示する文字列
             line (int): 表示行（1または2）
         """
         try:
-            # 行の指定（1行目: (0,0), 2行目: (0,1)）
+            # 行の指定（1行目: (0,0), 2行目: (1,0)）
             if line == 1:
                 self.lcd.cursor_pos = (0, 0)
             elif line == 2:
-                self.lcd.cursor_pos = (0, 1)
+                self.lcd.cursor_pos = (1, 0)
             else:
                 print("エラー: 行は1または2を指定してください")
                 return
-            
+
             # 16文字以内の場合はそのまま表示
             if len(text) <= 16:
-                # 行をクリアしてから表示
-                self.lcd.write_string(' ' * 16)  # 行をクリア
-                self.lcd.cursor_pos = (0, line - 1)
+                # 行をクリアしてから表示（古い文字を消すため）
+                self.lcd.write_string(' ' * 16)  # スペース16個で行全体をクリア
+                self.lcd.cursor_pos = (line - 1, 0)
                 self.lcd.write_string(text)
                 print(f"第{line}行に表示: {text}")
             else:
                 # 16文字を超える場合はスクロール表示
                 self.scroll_text(text, line)
-                
+
         except Exception as e:
             print(f"文字表示エラー: {e}")
     
     def scroll_text(self, text, line=1, scroll_delay=0.3):
         """
         長い文字列をスクロール表示する
-        
+
         Args:
             text (str): 表示する文字列
             line (int): 表示行（1または2）
@@ -98,48 +98,50 @@ class LCDDisplay:
         """
         try:
             print(f"第{line}行でスクロール表示開始: {text}")
-            
+
             # 文字列の末尾にスペースを追加してループしやすくする
             scroll_text = text + "    "
-            
+
             # スクロール表示（文字列を一周表示）
             for i in range(len(scroll_text)):
                 # 表示する16文字の部分を取得
                 display_part = scroll_text[i:i+16]
-                
-                # 16文字に満たない場合は先頭から補完
+
+                # 16文字に満たない場合は先頭から補完（ループ表示のため）
                 if len(display_part) < 16:
                     display_part += scroll_text[:16-len(display_part)]
-                
-                # 指定行に表示
+
+                # 指定行に表示（1行目: (0,0), 2行目: (1,0)）
                 if line == 1:
                     self.lcd.cursor_pos = (0, 0)
                 else:
-                    self.lcd.cursor_pos = (0, 1)
-                
+                    self.lcd.cursor_pos = (1, 0)
+
                 self.lcd.write_string(display_part)
                 time.sleep(scroll_delay)
-            
+
             print("スクロール表示完了")
-            
+
         except Exception as e:
             print(f"スクロール表示エラー: {e}")
     
     def close(self):
         """
         LCDリソースをクリーンアップする
+
+        注意: lcd.close()を呼ぶと表示が消える場合があるため、
+        このメソッドでは何もしません。表示は保持されます。
         """
-        try:
-            self.lcd.close()
-            print("LCD接続を終了しました")
-        except Exception as e:
-            print(f"LCD終了処理エラー: {e}")
+        # lcd.close()を呼ぶと表示が消えるため、意図的に呼ばない
+        print("LCD表示を保持したまま終了します")
 
 def main():
     """
     メイン関数：コマンドライン引数を処理してLCD表示を実行
     """
+    # ==========================================
     # コマンドライン引数の設定
+    # ==========================================
     parser = argparse.ArgumentParser(
         description="LCD1602文字表示アプリ - Raspberry Pi用",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -152,7 +154,7 @@ def main():
   python3 lcd_display.py --test                  # テスト表示
         """
     )
-    
+
     # 引数の定義
     parser.add_argument('text', nargs='?', default='',
                        help='表示する文字列')
@@ -172,66 +174,78 @@ def main():
                        help='テスト表示を実行')
     
     args = parser.parse_args()
-    
+
+    # ==========================================
     # I²Cアドレスの変換（文字列から整数へ）
+    # ==========================================
     try:
         if args.address.startswith('0x'):
-            i2c_addr = int(args.address, 16)
+            i2c_addr = int(args.address, 16)  # 16進数として変換（例: "0x27" → 39）
         else:
-            i2c_addr = int(args.address)
+            i2c_addr = int(args.address)      # 10進数として変換
     except ValueError:
         print(f"エラー: 無効なI²Cアドレス '{args.address}'")
         sys.exit(1)
-    
+
+    # ==========================================
     # LCDディスプレイの初期化
+    # ==========================================
     lcd_display = LCDDisplay(i2c_address=i2c_addr, i2c_port=args.port, charmap=args.charmap)
-    
+
     try:
+        # ==========================================
         # 実行モードに応じた処理
+        # ==========================================
         if args.clear:
             # 画面クリアモード
             lcd_display.clear_display()
         
         elif args.test:
-            # テストモード
+            # テストモード（動作確認用の表示シーケンスを実行）
             print("テスト表示を開始します...")
             lcd_display.clear_display()
             time.sleep(1)
-            
+
             # 1行目にテスト文字列
             lcd_display.display_text("LCD Test Line 1", 1)
             time.sleep(2)
-            
+
             # 2行目にテスト文字列
             lcd_display.display_text("LCD Test Line 2", 2)
             time.sleep(2)
-            
-            # スクロールテスト
+
+            # スクロールテスト（長い文字列の表示確認）
             lcd_display.display_text("This is a very long scrolling message for testing", 1)
             time.sleep(1)
-            
+
             print("テスト表示完了")
         
         elif args.text:
             # 通常の文字表示モード
             if args.scroll or len(args.text) > 16:
-                # スクロール表示
+                # スクロール表示（16文字を超える場合または--scrollオプション指定時）
                 lcd_display.scroll_text(args.text, args.line)
             else:
-                # 通常表示
+                # 通常表示（16文字以内の場合）
                 lcd_display.display_text(args.text, args.line)
         else:
             # 引数なしの場合はヘルプを表示
+            print("エラー: 表示するテキストが指定されていません\n")
             parser.print_help()
+            print("\nヒント: テストモードを試してください:")
+            print("  python3 lcd_display.py --test")
     
     except KeyboardInterrupt:
         print("\n\n割り込み信号を受信しました。終了処理を実行中...")
-    
+
     except Exception as e:
         print(f"実行エラー: {e}")
-    
+
     finally:
-        # 必ずリソースをクリーンアップ
+        # ==========================================
+        # リソースのクリーンアップ（終了処理）
+        # ==========================================
+        # 必ずリソースをクリーンアップ（例外発生時も実行される）
         lcd_display.close()
         print("アプリケーションを終了しました")
 
